@@ -207,7 +207,7 @@ My long-term career goal is to grow into a **Data Engineer** role by building pr
 ### Connect With Me
 
 * **LinkedIn:** [Ismail Laouad](https://www.linkedin.com/in/ismail-laouad-3a9741303)
-* **GitHub:** [Your GitHub Profile](https://github.com/)
+* **GitHub:** [laouadismail333](https://github.com/laouadismail333)
 
 ---
 
