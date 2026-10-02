@@ -14,7 +14,7 @@ The goal is to transform raw CRM and ERP data into a structured, business-ready 
 
 This project follows the **Medallion Architecture**, organized into three layers: Bronze, Silver, and Gold.
 
-![Data Architecture](docs/data_architecture.png)
+![Data Architecture](docs/data-architecture.png)
 
 ### 1. Bronze Layer — Raw Data
 
