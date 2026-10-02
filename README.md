@@ -1,145 +1,222 @@
 # Data Warehouse and Analytics Project
 
-Welcome to the **Data Warehouse and Analytics Project** repository! 🚀  
-This project demonstrates a comprehensive data warehousing and analytics solution, from building a data warehouse to generating actionable insights. Designed as a portfolio project, it highlights industry best practices in data engineering and analytics.
+Welcome to my **Data Warehouse and Analytics Project** repository! 🚀
+
+I'm **Ismail Laouad**, a Web and Mobile Application Development graduate with a strong interest in SQL development, data engineering, and database architecture.
+
+This project demonstrates the development of a modern data warehouse using **Microsoft SQL Server**, following the Medallion Architecture. It covers data ingestion, data cleansing, transformation, data integration, and analytical data modeling using SQL.
+
+The goal is to transform raw CRM and ERP data into a structured, business-ready data warehouse that supports analytical queries and reporting.
 
 ---
+
 ## 🏗️ Data Architecture
 
-The data architecture for this project follows Medallion Architecture **Bronze**, **Silver**, and **Gold** layers:
-![Data Architecture](C:\Users\lenovo\Pictures\Drow.io\data-architecture.png)
+This project follows the **Medallion Architecture**, organized into three layers: Bronze, Silver, and Gold.
 
-1. **Bronze Layer**: Stores raw data as-is from the source systems. Data is ingested from CSV Files into SQL Server Database.
-2. **Silver Layer**: This layer includes data cleansing, standardization, and normalization processes to prepare data for analysis.
-3. **Gold Layer**: Houses business-ready data modeled into a star schema required for reporting and analytics.
+![Data Architecture](docs/data_architecture.png)
+
+### 1. Bronze Layer — Raw Data
+
+The Bronze Layer stores raw data ingested from CRM and ERP CSV files into SQL Server.
+
+* Loads source data using SQL Server `BULK INSERT`.
+* Preserves the original source structure.
+* Uses stored procedures to orchestrate data loading.
+* Implements execution logging, error handling, and batch duration tracking.
+
+### 2. Silver Layer — Data Cleansing and Transformation
+
+The Silver Layer prepares data for analytical use through data cleansing, standardization, and transformation.
+
+* Handles data quality issues and inconsistent values.
+* Standardizes customer, product, and sales data.
+* Integrates CRM and ERP information.
+* Applies SQL transformations to prepare reliable data for the Gold Layer.
+
+### 3. Gold Layer — Business-Ready Data
+
+The Gold Layer organizes the transformed data into analytical views designed for reporting and business analysis.
+
+* Creates customer and product dimension views.
+* Creates a sales fact view.
+* Connects sales transactions to customer and product dimensions.
+* Structures data following a star schema approach for analytical queries and reporting.
 
 ---
+
 ## 📖 Project Overview
 
-This project involves:
+This project focuses on the practical implementation of a SQL Server data warehouse.
 
-1. **Data Architecture**: Designing a Modern Data Warehouse Using Medallion Architecture **Bronze**, **Silver**, and **Gold** layers.
-2. **ETL Pipelines**: Extracting, transforming, and loading data from source systems into the warehouse.
-3. **Data Modeling**: Developing fact and dimension tables optimized for analytical queries.
-4. **Analytics & Reporting**: Creating SQL-based reports and dashboards for actionable insights.
+### Key Components
 
-🎯 This repository is an excellent resource for professionals and students looking to showcase expertise in:
-- SQL Development
-- Data Architect
-- Data Engineering  
-- ETL Pipeline Developer  
-- Data Modeling  
-- Data Analytics  
+* **Data Architecture:** Implementation of Bronze, Silver, and Gold layers.
+* **ETL Development:** Loading and transforming CRM and ERP data using SQL Server stored procedures.
+* **Data Quality:** Cleaning, standardizing, and integrating source data.
+* **Data Modeling:** Building analytical dimensions and fact views.
+* **SQL Development:** Writing joins, window functions, conditional logic, stored procedures, and data transformation queries.
+* **Data Documentation:** Organizing SQL scripts and documenting the data warehouse architecture.
+
+### 🎯 Skills Demonstrated
+
+* SQL Server and T-SQL
+* Data Warehousing
+* ETL / ELT Concepts
+* Data Cleansing and Transformation
+* Stored Procedures and Error Handling
+* Dimensional Modeling
+* Star Schema
+* Medallion Architecture
+* Relational Database Design
+* Git and GitHub
 
 ---
 
-## 🛠️ Important Links & Tools:
+## 🛠️ Technologies and Tools
+| Technology                          | Purpose                                              |
+| ----------------------------------- | ---------------------------------------------------- |
+| Microsoft SQL Server                | Data warehouse database                              |
+| SQL Server Management Studio (SSMS) | Database development and administration              |
+| T-SQL                               | Data loading, transformation, and analytical queries |
+| SQL Server Stored Procedures        | ETL orchestration and processing                     |
+| CSV Files                           | CRM and ERP source datasets                          |
+| Draw.io                             | Data architecture and modeling diagrams              |
+| Notion                              | Project task management and implementation roadmap   |
+| Git and GitHub                      | Version control and project documentation            |
 
-Everything is for Free!
-- **[Datasets](datasets/):** Access to the project dataset (csv files).
-- **[SQL Server Express](https://www.microsoft.com/en-us/sql-server/sql-server-downloads):** Lightweight server for hosting your SQL database.
-- **[SQL Server Management Studio (SSMS)](https://learn.microsoft.com/en-us/sql/ssms/download-sql-server-management-studio-ssms?view=sql-server-ver16):** GUI for managing and interacting with databases.
-- **[Git Repository](https://github.com/):** Set up a GitHub account and repository to manage, version, and collaborate on your code efficiently.
-- **[DrawIO](https://www.drawio.com/):** Design data architecture, models, flows, and diagrams.
-- **[Notion](https://www.notion.com/templates/sql-data-warehouse-project):** Get the Project Template from Notion
-- **[Notion Project Steps](https://thankful-pangolin-2ca.notion.site/SQL-Data-Warehouse-Project-16ed041640ef80489667cfe2f380b269?pvs=4):** Access to All Project Phases and Tasks.
+### Useful Resources
+
+* [SQL Server Downloads](https://www.microsoft.com/en-us/sql-server/sql-server-downloads)
+* [SQL Server Management Studio](https://learn.microsoft.com/en-us/ssms/download-sql-server-management-studio-ssms)
+* [Draw.io](https://www.drawio.com/)
+* [Microsoft SQL Server Documentation](https://learn.microsoft.com/en-us/sql/sql-server/)
 
 ---
 
 ## 🚀 Project Requirements
 
-### Building the Data Warehouse (Data Engineering)
+### Data Engineering — Building the Data Warehouse
 
-#### Objective
-Develop a modern data warehouse using SQL Server to consolidate sales data, enabling analytical reporting and informed decision-making.
+**Objective:** Build a modern data warehouse using SQL Server to consolidate CRM and ERP sales-related data and prepare it for analytical reporting.
 
-#### Specifications
-- **Data Sources**: Import data from two source systems (ERP and CRM) provided as CSV files.
-- **Data Quality**: Cleanse and resolve data quality issues prior to analysis.
-- **Integration**: Combine both sources into a single, user-friendly data model designed for analytical queries.
-- **Scope**: Focus on the latest dataset only; historization of data is not required.
-- **Documentation**: Provide clear documentation of the data model to support both business stakeholders and analytics teams.
+**Specifications:**
+
+* **Data Sources:** Import CRM and ERP data from CSV files.
+* **Data Quality:** Clean and standardize data before analytical use.
+* **Data Integration:** Combine data from different source systems into a unified model.
+* **Data Modeling:** Organize the Gold Layer into customer and product dimensions and a sales fact view.
+* **ETL Processing:** Implement SQL scripts and stored procedures for data loading and transformation.
+* **Logging and Error Handling:** Track ETL execution, processing duration, and errors.
+* **Scope:** Focus on the latest dataset; historical data tracking is not a primary requirement.
+* **Documentation:** Document the architecture, SQL scripts, and data model.
+
+### Analytics and Reporting
+
+The Gold Layer provides a foundation for analytical queries covering:
+
+* Customer behavior and segmentation
+* Product performance
+* Sales amounts and quantities
+* Sales trends over time
+
+These analytical outputs can be used in reporting tools such as Power BI.
 
 ---
-
-### BI: Analytics & Reporting (Data Analysis)
-
-#### Objective
-Develop SQL-based analytics to deliver detailed insights into:
-- **Customer Behavior**
-- **Product Performance**
-- **Sales Trends**
-
-These insights empower stakeholders with key business metrics, enabling strategic decision-making.  
-
-For more details, refer to [docs/requirements.md](docs/requirements.md).
 
 ## 📂 Repository Structure
+
+```text
+DATAWarehouse/
+│
+├── datasets/
+│   ├── source_crm/
+│   └── source_erp/
+│
+├── docs/
+│   ├── data_architecture.drawio
+│   ├── data_flow.drawio
+│   ├── data_models.drawio
+│   └── data_catalog.md
+│
+├── scripts/
+│   ├── bronze/
+│   │   ├── ddl_bronze.sql
+│   │   └── proc_load_bronze.sql
+│   │
+│   ├── silver/
+│   │   ├── ddl_silver.sql
+│   │   └── proc_load_silver.sql
+│   │
+│   └── gold/
+│       └── ddl_gold.sql
+│
+├── tests/
+│
+├── README.md
+├── LICENSE
+└── .gitignore
 ```
-data-warehouse-project/
-│
-├── datasets/                           # Raw datasets used for the project (ERP and CRM data)
-│
-├── docs/                               # Project documentation and architecture details
-│   ├── etl.drawio                      # Draw.io file shows all different techniquies and methods of ETL
-│   ├── data_architecture.drawio        # Draw.io file shows the project's architecture
-│   ├── data_catalog.md                 # Catalog of datasets, including field descriptions and metadata
-│   ├── data_flow.drawio                # Draw.io file for the data flow diagram
-│   ├── data_models.drawio              # Draw.io file for data models (star schema)
-│   ├── naming-conventions.md           # Consistent naming guidelines for tables, columns, and files
-│
-├── scripts/                            # SQL scripts for ETL and transformations
-│   ├── bronze/                         # Scripts for extracting and loading raw data
-│   ├── silver/                         # Scripts for cleaning and transforming data
-│   ├── gold/                           # Scripts for creating analytical models
-│
-├── tests/                              # Test scripts and quality files
-│
-├── README.md                           # Project overview and instructions
-├── LICENSE                             # License information for the repository
-├── .gitignore                          # Files and directories to be ignored by Git
-└── requirements.txt                    # Dependencies and requirements for the project
-```
----
 
-## ☕ Stay Connected
-
-Let's stay in touch! Feel free to connect with me on the following platforms:
-
-[![YouTube](https://img.shields.io/badge/YouTube-red?style=for-the-badge&logo=youtube&logoColor=white)](http://bit.ly/3GiCVUE)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/in/baraa-khatib-salkini)
-[![Website](https://img.shields.io/badge/Website-000000?style=for-the-badge&logo=google-chrome&logoColor=white)](https://www.datawithbaraa.com)
-[![Newsletter](https://img.shields.io/badge/Newsletter-FF5722?style=for-the-badge&logo=substack&logoColor=white)](https://bit.ly/BaraaNewsletter)
-[![PayPal](https://img.shields.io/badge/PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/baraasalkini)
-[![Join](https://img.shields.io/badge/Join-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/@datawithbaraa)
-
-All Courses and their materials are completely free, and all I ask is your support through subscribing, liking, and commenting on my channel. Your engagement means the world to me and It help the channel!
-- ✅ **SQL Full Course:** [Course Link](https://youtu.be/SSKVgrwhzus) | [Download Materials](https://www.datawithbaraa.com/sql-introduction/sql-ultimate-course/) | [GIT Repo](https://github.com/DataWithBaraa/sql-ultimate-course)
-- ✅ **Tableau Full Course:** [Course Link](https://www.youtube.com/watch?v=K3pXnbniUcM) | [Download Materials](https://www.datawithbaraa.com/tableau/tableau-thank-you/) | [Public](https://public.tableau.com/app/profile/baraa.salkini/vizzes)
-
-- ✅ **SQL Data Warehouse Project:** [Course Link](https://youtu.be/SSKVgrwhzus) | [Download Materials](https://www.datawithbaraa.com/sql-introduction/advanced-sql-project/) | [GIT Repo](https://github.com/DataWithBaraa/sql-data-warehouse-project)
-- ✅ **SQL Exploratory Data Analysis Project:** [Course Link](https://youtu.be/SSKVgrwhzus) | [Download Materials](https://www.datawithbaraa.com/sql-introduction/advanced-sql-analytics-project/) | [GIT Repo](https://github.com/DataWithBaraa/sql-data-analytics-project)
-- ✅ **SQL Advanced Data Analysis Project:** [Course Link](https://youtu.be/SSKVgrwhzus) | [Download Materials](https://www.datawithbaraa.com/sql-introduction/advanced-sql-analytics-project/) | [GIT Repo](https://github.com/DataWithBaraa/sql-data-analytics-project)
-  
-- ✅ **Tableau Sales Project:** [Course Link](https://www.youtube.com/watch?v=dahrmqT5GD4) | [Download Materials](https://datawithbaraa.substack.com/p/access-to-course-materials) | [Public](https://public.tableau.com/app/profile/baraa.salkini/vizzes)
-- ✅ **Tableau HR Project:** [Course Link](https://www.youtube.com/watch?v=UcGF09Awm4Y) | [Download Materials](https://datawithbaraa.substack.com/p/access-to-course-materials) | [Public](https://public.tableau.com/app/profile/baraa.salkini/vizzes)
-- ✅ **ChatGPT:** [Course Link](https://www.youtube.com/watch?v=LJLNfei4i-c) | [Download Materials](https://datawithbaraa.substack.com/p/access-to-course-materials)
+*Note: This structure describes the intended organization. Adjust filenames and folders to match the files actually present in the repository.*
 
 ---
 
-## 🛡️ License
+## 💻 Featured SQL Implementations
 
-This project is licensed under the [MIT License](LICENSE). You are free to use, modify, and share this project with proper attribution.
+### Bronze Layer
 
-## 🌟 About Me
+* Raw data ingestion from CRM and ERP CSV files.
+* Table loading using `BULK INSERT`.
+* Batch execution logging and error handling.
+* Stored procedure-based loading.
 
-Hi there! I'm **Baraa Khatib Salkini**, also known as **Data With Baraa**. I’m an IT professional and passionate YouTuber on a mission to share knowledge and make working with data enjoyable and engaging!
+### Silver Layer
 
-Let's stay in touch! Feel free to connect with me on the following platforms:
+* Data cleansing and standardization.
+* Customer and product data transformation.
+* Sales data preparation.
+* CRM and ERP data integration.
 
-[![YouTube](https://img.shields.io/badge/YouTube-red?style=for-the-badge&logo=youtube&logoColor=white)](http://bit.ly/3GiCVUE)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/in/baraa-khatib-salkini)
-[![Website](https://img.shields.io/badge/Website-000000?style=for-the-badge&logo=google-chrome&logoColor=white)](https://www.datawithbaraa.com)
-[![Newsletter](https://img.shields.io/badge/Newsletter-FF5722?style=for-the-badge&logo=substack&logoColor=white)](https://bit.ly/BaraaNewsletter)
-[![PayPal](https://img.shields.io/badge/PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/baraasalkini)
-[![Join](https://img.shields.io/badge/Join-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/@datawithbaraa)
+### Gold Layer
+
+* `gold.dim_customers` — Customer dimension view.
+* `gold.dim_products` — Product dimension view.
+* `gold.fact_sales` — Sales fact view.
+
+The Gold Layer uses dimension keys to connect sales records with customer and product information.
+
+---
+
+## 👨‍💻 About Me
+
+Hi, I'm **Ismail Laouad**, a developer from Morocco with a background in .NET, web application development, and technical support for Sage 100.
+
+I'm currently developing my skills in SQL Server, data warehousing, and data engineering through hands-on projects.
+
+My technical interests include:
+
+* SQL Development and Database Engineering
+* Data Warehousing and ETL Pipelines
+* Data Modeling and Analytics
+* Python for Data Engineering
+* Cloud Data Platforms and Distributed Data Processing
+
+My long-term career goal is to grow into a **Data Engineer** role by building practical projects and strengthening my database, programming, and data processing skills.
+
+### Connect With Me
+
+* **LinkedIn:** [Ismail Laouad](https://www.linkedin.com/in/ismail-laouad-3a9741303)
+* **GitHub:** [Your GitHub Profile](https://github.com/)
+
+---
+
+## 📜 License
+
+This project is intended for educational and portfolio purposes.
+
+If you include a `LICENSE` file, make sure its terms match the license you have selected and that you have the right to redistribute the datasets and other included materials.
+
+---
+
+⭐ If you find this project useful, feel free to explore the SQL scripts and follow my progress as I continue learning data engineering.
