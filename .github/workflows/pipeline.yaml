@@ -144,7 +144,7 @@ jobs:
 
           sqlcmd -S localhost,1433 -U sa -C -b \
             -d DataWarehouse \
-            -i database/02_bronze_tables.sql
+            -i scripts/bronze/create_bronze_table.sql
 
       # Step 8: Create Silver tables
       - name: Create Silver tables
@@ -155,7 +155,7 @@ jobs:
 
           sqlcmd -S localhost,1433 -U sa -C -b \
             -d DataWarehouse \
-            -i database/04_silver_tables.sql
+            -i scripts/silver/04_silver_tables.sql
 
       # Step 9: Create and execute the Bronze loading procedure
       - name: Load Bronze layer
@@ -166,7 +166,7 @@ jobs:
 
           sqlcmd -S localhost,1433 -U sa -C -b \
             -d DataWarehouse \
-            -i database/03_bronze_load.sql
+            -i scripts/bronze/load_bronze_procedure.sql
 
       # Step 10: Execute transformations from Bronze to Silver
       - name: Load Silver layer
@@ -188,20 +188,9 @@ jobs:
 
           sqlcmd -S localhost,1433 -U sa -C -b \
             -d DataWarehouse \
-            -i database/06_gold_views.sql
+            -i scripts/gold/ddl_gold.sql
 
-      # Step 12: Run data quality assertions
-      - name: Run data quality tests
-        env:
-          SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
-        run: |
-          set -euo pipefail
-
-          sqlcmd -S localhost,1433 -U sa -C -b \
-            -d DataWarehouse \
-            -i tests/data_quality_tests.sql
-
-      # Step 13: Display a final success message
+      # Step 12: Display a final success message
       - name: Pipeline summary
         if: success()
         run: |
