@@ -1,0 +1,68 @@
+name: SQLServer-DW-ETL-CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-etl-pipeline:
+    runs-on: ubuntu-latest
+    # 1. Spin up an ephemeral SQL Server container
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          SA_PASSWORD: "Awt@1234"
+        ports:
+          - 1433:1433
+    
+    steps:
+      # 2. Checkout your database project/scripts repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      # 3. Install SQL Server command-line tools (sqlcmd) on the runner
+      - name: Install SQL Server command-line tools
+        run: |
+          sudo curl https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg
+          curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y mssql-tools18 unixodbc-dev
+          echo 'export PATH="$PATH:/opt/mssql-tools18/bin"' >> ~/.bashrc
+
+      # 4. Wait for SQL Server to fully boot up
+      - name: Wait for SQL Server to start
+        run: |
+          echo "Waiting for SQL Server to start..."
+          sleep 30  # Wait for 30 seconds to ensure SQL Server is ready
+
+      # 5. Execute your DW Setup & ETL Scripts in order
+      - name: Execute DW Setup & ETL Scripts
+        run: |
+          SERVER=ISMAIL
+          USER=sa
+          PASSWORD=Awt@1234
+          echo "--- Creating Database ---"
+          /opt/mssql-tools18/bin/sqlcmd -S $SERVER -U $USER -P $PASSWORD -C -Q "CREATE DATABASE DataWarehouse;"
+
+          echo "--- Running Schema / Table Creation Scripts ---"
+          /opt/mssql-tools18/bin/sqlcmd -S $SERVER -U $USER -P $PASSWORD -C -d DataWarehouse -i database/schema.sql
+
+          echo "--- Executing ETL Stored Procedures (Staging -> Dimensions -> Facts) ---"
+          /opt/mssql-tools18/bin/sqlcmd -S $SERVER -U $USER -P $PASSWORD -C -d DataWarehouse -i database/etl_load.sql
+      
+      # 6. Run automated test queries to validate data integrity
+      - name: Run Data Quality / Assertion Tests
+        run: |
+          SERVER=ISMAIL
+          USER=sa
+          PASSWORD=Awt@1234
+          echo "--- Running Data Quality Tests ---"
+          /opt/mssql-tools18/bin/sqlcmd -S $SERVER -U $USER -P $PASSWORD -C -d DataWarehouse -i tests/data_quality_tests.sql
+
+
+
+      
+  
