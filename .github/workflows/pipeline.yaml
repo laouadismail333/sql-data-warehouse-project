@@ -1,17 +1,24 @@
 
+# Workflow name displayed in the GitHub Actions tab
 name: SQLServer-DW-ETL-CI
 
+# Run the pipeline when code is pushed or a pull request targets main
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
 
+# Grant only the permissions required to read the repository
+permissions:
+  contents: read
+
 jobs:
   test-etl-pipeline:
-    # Use Ubuntu 22.04 to match the Microsoft package repository below.
+    # Use Ubuntu 22.04 for a consistent CI environment
     runs-on: ubuntu-22.04
 
+    # Start a temporary SQL Server instance for integration tests
     services:
       sqlserver:
         image: mcr.microsoft.com/mssql/server:2022-latest
@@ -22,12 +29,14 @@ jobs:
           - 1433:1433
 
     steps:
-      - name: Checkout code
+      # Step 1: Download the repository files
+      - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Step 2: Install sqlcmd and its dependencies
       - name: Install SQL Server command-line tools
         run: |
-          set -e
+          set -euo pipefail
 
           curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
             | sudo gpg --batch --yes --dearmor \
@@ -43,15 +52,40 @@ jobs:
 
           echo "/opt/mssql-tools18/bin" >> "$GITHUB_PATH"
 
+      # Step 3: Validate that the required SQL scripts exist
+      - name: Validate project files
+        run: |
+          set -euo pipefail
+
+          required_files=(
+            "database/01_init_database.sql"
+            "database/02_bronze_tables.sql"
+            "database/03_bronze_load.sql"
+            "database/04_silver_tables.sql"
+            "database/05_silver_load.sql"
+            "database/06_gold_views.sql"
+            "tests/data_quality_tests.sql"
+          )
+
+          for file in "${required_files[@]}"; do
+            if [[ ! -f "$file" ]]; then
+              echo "::error::Required file not found: $file"
+              exit 1
+            fi
+
+            echo "Found: $file"
+          done
+
+      # Step 4: Wait until SQL Server is ready to accept connections
       - name: Wait for SQL Server
         env:
           SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
         run: |
-          set -e
+          set -euo pipefail
 
           for i in {1..30}; do
             if sqlcmd -S localhost,1433 -U sa -C \
-              -Q "SELECT 1" -b; then
+              -Q "SELECT 1" -b -l 5; then
               echo "SQL Server is ready."
               exit 0
             fi
@@ -60,37 +94,117 @@ jobs:
             sleep 5
           done
 
-          echo "SQL Server failed to start."
+          echo "::error::SQL Server failed to start."
           exit 1
 
-      - name: Create DataWarehouse database
-        env:
-          SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
+      # Step 5: Copy source CSV files into the SQL Server container
+      # Required because BULK INSERT reads files from the SQL Server host
+      - name: Prepare source datasets
         run: |
-          sqlcmd -S localhost,1433 -U sa -C -b \
-            -Q "IF DB_ID('DataWarehouse') IS NULL
-                CREATE DATABASE DataWarehouse;"
+          set -euo pipefail
 
-      - name: Create schema and tables
+          if [[ ! -d "datasets/source_crm" ||
+                ! -d "datasets/source_erp" ]]; then
+            echo "::error::Expected datasets/source_crm and datasets/source_erp."
+            exit 1
+          fi
+
+          SQL_CONTAINER=$(docker ps \
+            --filter "ancestor=mcr.microsoft.com/mssql/server:2022-latest" \
+            --format '{{.ID}}' | head -n 1)
+
+          if [[ -z "$SQL_CONTAINER" ]]; then
+            echo "::error::SQL Server container not found."
+            exit 1
+          fi
+
+          echo "SQL_CONTAINER=$SQL_CONTAINER" >> "$GITHUB_ENV"
+
+          docker exec "$SQL_CONTAINER" mkdir -p /tmp/datasets
+          docker cp datasets/. "$SQL_CONTAINER":/tmp/datasets/
+
+          echo "Source datasets copied into SQL Server container."
+
+      # Step 6: Create the database and Bronze, Silver, Gold schemas
+      - name: Initialize DataWarehouse
         env:
           SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
         run: |
+          set -euo pipefail
+
+          sqlcmd -S localhost,1433 -U sa -C -b \
+            -i database/01_init_database.sql
+
+      # Step 7: Create raw Bronze staging tables
+      - name: Create Bronze tables
+        env:
+          SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
+        run: |
+          set -euo pipefail
+
           sqlcmd -S localhost,1433 -U sa -C -b \
             -d DataWarehouse \
-            -i database/schema.sql
+            -i database/02_bronze_tables.sql
 
-      - name: Execute ETL stored procedures
+      # Step 8: Create Silver tables
+      - name: Create Silver tables
         env:
           SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
         run: |
+          set -euo pipefail
+
           sqlcmd -S localhost,1433 -U sa -C -b \
             -d DataWarehouse \
-            -i database/etl_load.sql
+            -i database/04_silver_tables.sql
 
+      # Step 9: Create and execute the Bronze loading procedure
+      - name: Load Bronze layer
+        env:
+          SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          sqlcmd -S localhost,1433 -U sa -C -b \
+            -d DataWarehouse \
+            -i database/03_bronze_load.sql
+
+      # Step 10: Execute transformations from Bronze to Silver
+      - name: Load Silver layer
+        env:
+          SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          sqlcmd -S localhost,1433 -U sa -C -b \
+            -d DataWarehouse \
+            -Q "EXEC silver.load_silver;" 
+
+      # Step 11: Create analytical Gold views
+      - name: Create Gold views
+        env:
+          SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          sqlcmd -S localhost,1433 -U sa -C -b \
+            -d DataWarehouse \
+            -i database/06_gold_views.sql
+
+      # Step 12: Run data quality assertions
       - name: Run data quality tests
         env:
           SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
         run: |
+          set -euo pipefail
+
           sqlcmd -S localhost,1433 -U sa -C -b \
             -d DataWarehouse \
             -i tests/data_quality_tests.sql
+
+      # Step 13: Display a final success message
+      - name: Pipeline summary
+        if: success()
+        run: |
+          echo "SQL Server Data Warehouse CI pipeline completed successfully."
+          echo "Database: DataWarehouse"
+          echo "Layers: Bronze -> Silver -> Gold"
