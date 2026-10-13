@@ -24,7 +24,7 @@ jobs:
         # Configure SQL Server credentials
         env:
           ACCEPT_EULA: "Y"
-          MSSQL_SA_PASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
+          MSSQL_SA_PASSWORD: ${{ Awt1234 }}
 
         # Expose SQL Server to the GitHub Actions runner
         ports:
