@@ -15,14 +15,18 @@ jobs:
     # Run the job on a fresh Ubuntu virtual machine
     runs-on: ubuntu-latest
 
+    
     # Start a temporary SQL Server container for integration testing
-    # 1. Spin up an ephemeral SQL Server container
     services:
       sqlserver:
         image: mcr.microsoft.com/mssql/server:2022-latest
-        environment:
+
+        # Configure SQL Server credentials
+        env:
           ACCEPT_EULA: "Y"
-          SA_PASSWORD: "YourStrongPassword_123"
+          MSSQL_SA_PASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
+
+        # Expose SQL Server to the GitHub Actions runner
         ports:
           - 1433:1433
 
