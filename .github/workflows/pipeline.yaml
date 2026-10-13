@@ -105,7 +105,7 @@ jobs:
 
           if [[ ! -d "Datasets/source_crm" ||
                 ! -d "Datasets/source_erp" ]]; then
-            echo "::error::Expected datasets/source_crm and datasets/source_erp."
+            echo "::error::Expected Datasets/source_crm and Datasets/source_erp."
             exit 1
           fi
 
@@ -120,10 +120,10 @@ jobs:
 
           echo "SQL_CONTAINER=$SQL_CONTAINER" >> "$GITHUB_ENV"
 
-          docker exec "$SQL_CONTAINER" mkdir -p /tmp/datasets
-          docker cp datasets/. "$SQL_CONTAINER":/tmp/datasets/
+          docker exec "$SQL_CONTAINER" mkdir -p /tmp/Datasets
+          docker cp Datasets/. "$SQL_CONTAINER":/tmp/Datasets/
 
-          echo "Source datasets copied into SQL Server container."
+          echo "Source Datasets copied into SQL Server container."
 
       # Step 6: Create the database and Bronze, Silver, Gold schemas
       - name: Initialize DataWarehouse
@@ -133,7 +133,7 @@ jobs:
           set -euo pipefail
 
           sqlcmd -S localhost,1433 -U sa -C -b \
-            -i database/01_init_database.sql
+            -i scripts/init_database.sql
 
       # Step 7: Create raw Bronze staging tables
       - name: Create Bronze tables
