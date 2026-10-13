@@ -58,13 +58,12 @@ jobs:
           set -euo pipefail
 
           required_files=(
-            "database/01_init_database.sql"
-            "database/02_bronze_tables.sql"
-            "database/03_bronze_load.sql"
-            "database/04_silver_tables.sql"
-            "database/05_silver_load.sql"
-            "database/06_gold_views.sql"
-            "tests/data_quality_tests.sql"
+            "database/init_database.sql"
+            "database/create_bronze_table.sql"
+            "database/load_bronze_procedure.sql"
+            "database/create_silver_table.sql"
+            "database/load_silver_procedure.sql"
+            "database/ddl_gold.sql"
           )
 
           for file in "${required_files[@]}"; do
@@ -90,7 +89,7 @@ jobs:
               exit 0
             fi
 
-            
+
             echo "Waiting for SQL Server ($i/30)..."
             sleep 5
           done
