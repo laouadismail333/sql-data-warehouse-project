@@ -114,6 +114,9 @@ jobs:
 
           echo "SQL_CONTAINER=$SQL_CONTAINER" >> "$GITHUB_ENV"
 
+          # Optional: uncomment if your CSVs are CRLF and the procedure uses 0x0a
+          # sed -i 's/\r$//' Datasets/source_crm/*.csv Datasets/source_erp/*.csv
+
           docker exec "$SQL_CONTAINER" \
             mkdir -p /tmp/datasets/source_crm /tmp/datasets/source_erp
 
@@ -122,6 +125,10 @@ jobs:
 
           docker cp Datasets/source_erp/. \
             "$SQL_CONTAINER":/tmp/datasets/source_erp/
+
+          # Make files readable by the mssql user
+          docker exec -u root "$SQL_CONTAINER" \
+            chmod -R a+rX /tmp/datasets
 
           docker exec "$SQL_CONTAINER" \
             ls -la /tmp/datasets/source_crm
@@ -166,16 +173,29 @@ jobs:
             -d DataWarehouse \
             -i scripts/silver/create_silver_table.sql
 
-      # 9. Create Bronze loading procedure
+      # 9. Create Bronze loading procedure (Windows path -> Linux path, temp copy only)
       - name: Create Bronze loading procedure
         env:
           SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
         run: |
           set -euo pipefail
 
+          cp scripts/bronze/load_bronze_procedure.sql /tmp/load_bronze_ci.sql
+
+          # On "FROM '...'" lines: D:\...\datasets\ -> /tmp/datasets/ then \ -> /
+          perl -pi -e 'if (/FROM\s+\x27/) { s/\x27[A-Za-z]:\\[^\x27]*?datasets\\/\x27\/tmp\/datasets\//i; s/\\/\//g; }' /tmp/load_bronze_ci.sql
+
+          echo "Paths after replacement:"
+          grep -n -i "FROM *'" /tmp/load_bronze_ci.sql
+
+          if grep -q -i 'D:\\' /tmp/load_bronze_ci.sql; then
+            echo "::error::A Windows path is still present in the script."
+            exit 1
+          fi
+
           sqlcmd -S localhost,1433 -U sa -C -b \
             -d DataWarehouse \
-            -i scripts/bronze/load_bronze_procedure.sql
+            -i /tmp/load_bronze_ci.sql
 
       # 10. Execute Bronze ETL
       - name: Load Bronze layer
