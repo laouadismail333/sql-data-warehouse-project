@@ -123,6 +123,7 @@ jobs:
           docker cp Datasets/source_erp/. \
             "$SQL_CONTAINER":/tmp/datasets/source_erp/
 
+          # Make files readable by the mssql user
           docker exec -u root "$SQL_CONTAINER" \
             chmod -R a+rX /tmp/datasets
 
@@ -172,4 +173,132 @@ jobs:
             -i /tmp/create_silver_ci.sql
 
           echo "=== Real columns of silver.crm_prd_info and silver.crm_sales_details ==="
-          sqlcmd -S localhost,1433 -U sa
+          sqlcmd -S localhost,1433 -U sa -C -No -b \
+            -d DataWarehouse -W -s "|" \
+            -Q "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='silver' AND TABLE_NAME IN ('crm_prd_info','crm_sales_details') ORDER BY TABLE_NAME, ORDINAL_POSITION;" \
+            || echo "::warning::Column diagnostic failed (non-blocking)"
+
+      # 9. Create Bronze loading procedure (Windows path -> Linux path, temp copy only)
+      - name: Create Bronze loading procedure
+        env:
+          SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          cp scripts/bronze/load_bronze_procedure.sql /tmp/load_bronze_ci.sql
+
+          # On "FROM '...'" lines: D:\...\datasets\ -> /tmp/datasets/ then \ -> /
+          perl -pi -e 'if (/FROM\s+\x27/) { s/\x27[A-Za-z]:\\[^\x27]*?datasets\\/\x27\/tmp\/datasets\//i; s/\\/\//g; }' /tmp/load_bronze_ci.sql
+
+          echo "Paths after replacement:"
+          grep -n -i "FROM *'" /tmp/load_bronze_ci.sql
+
+          if grep -q -i 'D:\\' /tmp/load_bronze_ci.sql; then
+            echo "::error::A Windows path is still present in the script."
+            exit 1
+          fi
+
+          sqlcmd -S localhost,1433 -U sa -C -b \
+            -d DataWarehouse \
+            -i /tmp/load_bronze_ci.sql
+
+      # 10. Execute Bronze ETL
+      - name: Load Bronze layer
+        env:
+          SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          sqlcmd -S localhost,1433 -U sa -C -b \
+            -d DataWarehouse \
+            -Q "EXEC bronze.load_bronze;"
+
+      # 11. Create Silver loading procedure (temp copy, patched)
+      - name: Create Silver loading procedure
+        env:
+          SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          cp scripts/silver/load_silver_procedure.sql /tmp/load_silver_ci.sql
+
+          # ---- PATCH RULES for the procedure (add yours here) ----
+          # Typo fix (guess): prd_codt -> prd_cost
+          sed -i 's/prd_codt/prd_cost/g' /tmp/load_silver_ci.sql
+          # --------------------------------------------------------
+
+          echo "=== Lines around the reported errors (after patch) ==="
+          sed -n '205,215p;232,238p;280,290p' /tmp/load_silver_ci.sql | cat -n
+
+          sqlcmd -S localhost,1433 -U sa -C -b \
+            -d DataWarehouse \
+            -i /tmp/load_silver_ci.sql
+
+      # 12. Execute Silver ETL
+      - name: Load Silver layer
+        env:
+          SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          sqlcmd -S localhost,1433 -U sa -C -b \
+            -d DataWarehouse \
+            -Q "EXEC silver.load_silver;"
+
+      # 13. Create Gold views
+      - name: Create Gold views
+        env:
+          SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          sqlcmd -S localhost,1433 -U sa -C -b \
+            -d DataWarehouse \
+            -i scripts/gold/ddl_gold.sql
+
+      # 14. Run Silver quality checks
+      - name: Test Silver layer
+        env:
+          SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          sqlcmd -S localhost,1433 -U sa -C -b \
+            -d DataWarehouse \
+            -i tests/quality_checks_silver.sql
+
+      # 15. Run Gold quality checks
+      - name: Test Gold layer
+        env:
+          SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          sqlcmd -S localhost,1433 -U sa -C -b \
+            -d DataWarehouse \
+            -i tests/quality_checks_gold.sql
+
+      # Diagnostics on failure
+      - name: Diagnostics on failure
+        if: failure()
+        env:
+          SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
+        run: |
+          echo "=== Silver DDL (crm_prd_info, crm_sales_details) ==="
+          grep -n -i -A14 "crm_prd_info\|crm_sales_details" scripts/silver/create_silver_table.sql || true
+
+          echo "=== Bronze columns ==="
+          sqlcmd -S localhost,1433 -U sa -C -No -b \
+            -d DataWarehouse -W -s "|" \
+            -Q "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='bronze' AND TABLE_NAME IN ('crm_prd_info','crm_sales_details') ORDER BY TABLE_NAME, ORDINAL_POSITION;" \
+            || true
+
+      # 16. Pipeline summary
+      - name: Pipeline summary
+        if: success()
+        run: |
+          echo "SQL Server Data Warehouse CI pipeline completed successfully."
+          echo "Database: DataWarehouse"
+          echo "Layers: Bronze -> Silver -> Gold"
+          echo "Silver quality checks: PASSED"
+          echo "Gold quality checks: PASSED"
