@@ -155,7 +155,7 @@ jobs:
 
           sqlcmd -S localhost,1433 -U sa -C -b \
             -d DataWarehouse \
-            -i scripts/silver/04_silver_tables.sql
+            -i scripts/silver/create_silver_table.sql
 
       # Step 9: Create and execute the Bronze loading procedure
       - name: Load Bronze layer
