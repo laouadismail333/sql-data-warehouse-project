@@ -58,12 +58,12 @@ jobs:
           set -euo pipefail
 
           required_files=(
-            "database/init_database.sql"
-            "database/create_bronze_table.sql"
-            "database/load_bronze_procedure.sql"
-            "database/create_silver_table.sql"
-            "database/load_silver_procedure.sql"
-            "database/ddl_gold.sql"
+            "scripts/init_database.sql"
+            "scripts/bronze/create_bronze_table.sql"
+            "scripts/bronze/load_bronze_procedure.sql"
+            "scripts/silver/create_silver_table.sql"
+            "scripts/silver/load_silver_procedure.sql"
+            "scripts/gold/ddl_gold.sql"
           )
 
           for file in "${required_files[@]}"; do
