@@ -103,8 +103,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ ! -d "datasets/source_crm" ||
-                ! -d "datasets/source_erp" ]]; then
+          if [[ ! -d "Datasets/source_crm" ||
+                ! -d "Datasets/source_erp" ]]; then
             echo "::error::Expected datasets/source_crm and datasets/source_erp."
             exit 1
           fi
