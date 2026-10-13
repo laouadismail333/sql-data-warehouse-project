@@ -1,4 +1,8 @@
+
+# Workflow name displayed in the GitHub Actions tab
 name: SQLServer-DW-ETL-CI
+
+# Trigger the workflow when code is pushed or a pull request targets main
 on:
   push:
     branches: [main]
@@ -6,63 +10,118 @@ on:
     branches: [main]
 
 jobs:
+  # Job responsible for setting up SQL Server and testing the ETL pipeline
   test-etl-pipeline:
+    # Run the job on a fresh Ubuntu virtual machine
     runs-on: ubuntu-latest
-    # 1. Spin up an ephemeral SQL Server container
+
+    # Start a temporary SQL Server container for integration testing
     services:
       sqlserver:
         image: mcr.microsoft.com/mssql/server:2022-latest
+
+        # Configure SQL Server using GitHub repository secrets
         env:
           ACCEPT_EULA: "Y"
-          SA_PASSWORD: "Awt@1234"
+          MSSQL_SA_PASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
+
+        # Expose SQL Server on port 1433
         ports:
           - 1433:1433
-    
+
+        # Check SQL Server health and retry until the container is ready
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd
+          -S localhost -U sa
+          -P \"$MSSQL_SA_PASSWORD\" -C
+          -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 15
+          --health-start-period 30s
+
     steps:
-      # 2. Checkout your database project/scripts repository
+      # Step 1: Download the repository source code to the runner
       - name: Checkout code
-        uses: actions/checkout@v3
-      
-      # 3. Install SQL Server command-line tools (sqlcmd) on the runner
+        uses: actions/checkout@v4
+
+      # Step 2: Install Microsoft's SQL Server command-line tools
       - name: Install SQL Server command-line tools
         run: |
-          sudo curl https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg
-          curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
+          # Download Microsoft's public signing key and convert it to a keyring
+          curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
+            | sudo gpg --batch --yes --dearmor \
+                -o /usr/share/keyrings/microsoft-prod.gpg
+
+          # Register Microsoft's Ubuntu package repository
+          curl -fsSL https://packages.microsoft.com/config/ubuntu/22.04/prod.list \
+            | sudo tee /etc/apt/sources.list.d/mssql-release.list
+
+          # Refresh the package index
           sudo apt-get update
+
+          # Install sqlcmd and the required ODBC libraries
           sudo ACCEPT_EULA=Y apt-get install -y mssql-tools18 unixodbc-dev
-          echo 'export PATH="$PATH:/opt/mssql-tools18/bin"' >> ~/.bashrc
 
-      # 4. Wait for SQL Server to fully boot up
-      - name: Wait for SQL Server to start
+      # Step 3: Wait until SQL Server accepts connections
+      - name: Wait for SQL Server
+        env:
+          # Provide the password securely without exposing it in the script
+          SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
         run: |
-          echo "Waiting for SQL Server to start..."
-          sleep 30  # Wait for 30 seconds to ensure SQL Server is ready
+          # Retry the connection up to 30 times, waiting 5 seconds between attempts
+          for i in {1..30}; do
+            if /opt/mssql-tools18/bin/sqlcmd \
+              -S localhost,1433 -U sa -C \
+              -Q "SELECT 1" -b; then
+              echo "SQL Server is ready."
+              exit 0
+            fi
 
-      # 5. Execute your DW Setup & ETL Scripts in order
-      - name: Execute DW Setup & ETL Scripts
+            echo "Waiting for SQL Server ($i/30)..."
+            sleep 5
+          done
+
+          # Fail the job if SQL Server never becomes available
+          echo "SQL Server failed to start."
+          exit 1
+
+      # Step 4: Create the DataWarehouse database if it does not exist
+      - name: Create DataWarehouse database
+        env:
+          SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
         run: |
-          SERVER=ISMAIL
-          USER=sa
-          PASSWORD=Awt@1234
-          echo "--- Creating Database ---"
-          /opt/mssql-tools18/bin/sqlcmd -S $SERVER -U $USER -P $PASSWORD -C -Q "CREATE DATABASE DataWarehouse;"
+          /opt/mssql-tools18/bin/sqlcmd \
+            -S localhost,1433 -U sa -C -b \
+            -Q "IF DB_ID('DataWarehouse') IS NULL
+                CREATE DATABASE DataWarehouse;"
 
-          echo "--- Running Schema / Table Creation Scripts ---"
-          /opt/mssql-tools18/bin/sqlcmd -S $SERVER -U $USER -P $PASSWORD -C -d DataWarehouse -i database/schema.sql
-
-          echo "--- Executing ETL Stored Procedures (Staging -> Dimensions -> Facts) ---"
-          /opt/mssql-tools18/bin/sqlcmd -S $SERVER -U $USER -P $PASSWORD -C -d DataWarehouse -i database/etl_load.sql
-      
-      # 6. Run automated test queries to validate data integrity
-      - name: Run Data Quality / Assertion Tests
+      # Step 5: Create the database schemas, tables, and other objects
+      - name: Create schema and tables
+        env:
+          SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
         run: |
-          SERVER=ISMAIL
-          USER=sa
-          PASSWORD=Awt@1234
-          echo "--- Running Data Quality Tests ---"
-          /opt/mssql-tools18/bin/sqlcmd -S $SERVER -U $USER -P $PASSWORD -C -d DataWarehouse -i tests/data_quality_tests.sql
+          /opt/mssql-tools18/bin/sqlcmd \
+            -S localhost,1433 -U sa -C -b \
+            -d DataWarehouse \
+            -i database/schema.sql
 
+      # Step 6: Execute the ETL scripts to load and transform the data
+      - name: Execute ETL stored procedures
+        env:
+          SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
+        run: |
+          /opt/mssql-tools18/bin/sqlcmd \
+            -S localhost,1433 -U sa -C -b \
+            -d DataWarehouse \
+            -i database/etl_load.sql
 
-
-      
-  
+      # Step 7: Run SQL assertions to validate data quality and integrity
+      - name: Run data quality tests
+        env:
+          SQLCMDPASSWORD: ${{ secrets.SQLSERVER_SA_PASSWORD }}
+        run: |
+          /opt/mssql-tools18/bin/sqlcmd \
+            -S localhost,1433 -U sa -C -b \
+            -d DataWarehouse \
+            -i tests/data_quality_tests.sql
