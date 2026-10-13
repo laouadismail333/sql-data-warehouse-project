@@ -90,6 +90,7 @@ jobs:
               exit 0
             fi
 
+            
             echo "Waiting for SQL Server ($i/30)..."
             sleep 5
           done
